@@ -101,8 +101,24 @@ router.post('/', (req: Request<Record<string, unknown>, Record<string, unknown>,
       }
 
       if (req.body.layout) {
-        const filePath: string = path.resolve(req.body.layout).toLowerCase()
-        const isForbiddenFile: boolean = (filePath.includes('ftp') || filePath.includes('ctf.key') || filePath.includes('encryptionkeys'))
+        let layout: unknown = req.body.layout
+        if (typeof layout === 'string') {
+          try {
+            layout = decodeURIComponent(layout)
+          } catch {
+            // ignore malformed URI
+          }
+        }
+        const viewsDir: string = path.resolve(__dirname, '../views')
+        const isString = typeof layout === 'string'
+        const filePath: string = isString ? path.resolve(viewsDir, layout).toLowerCase() : ''
+        const isForbiddenFile: boolean = !isString ||
+          layout.includes('..') ||
+          layout.includes('\0') ||
+          !filePath.startsWith(viewsDir.toLowerCase() + path.sep) ||
+          filePath.includes('ftp') ||
+          filePath.includes('ctf.key') ||
+          filePath.includes('encryptionkeys')
         if (!isForbiddenFile) {
           res.render('dataErasureResult', {
             ...req.body,
